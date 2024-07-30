@@ -34,36 +34,37 @@ public:
 
 
 
-/*import UIKit
+/*
+import UIKit
 
 class ViewController: UIViewController {
+    @IBOutlet weak var scrollView: UIScrollView!
+    @IBOutlet weak var contentView: UIView!
     @IBOutlet weak private var topViewLabel: UILabel!
     @IBOutlet weak private var topView: UIView!
     
     var isExpanded: Bool = false
-    var frames: CGRect {topView.frame}
+    var frames: CGRect { topView.frame }
     var tableViewHeight: CGFloat {
-        (dataSource.count > 3) ? 120.0 : CGFloat(dataSource.count) * tableView.rowHeight
+        return (dataSource.count > 3) ? 120.0 : CGFloat(dataSource.count) * tableView.rowHeight
     }
+    
+    let dataSource = ["Option 1", "Option 2", "Option 3", "Option 4"]
     
     let tableView: UITableView = {
         let tableView = UITableView()
         tableView.rowHeight = 40
-        tableView.layer.cornerRadius = 5
+        tableView.layer.cornerRadius = 20
         tableView.separatorStyle = .none
-        tableView.layer.borderColor = UIColor.systemGray5.cgColor
-        tableView.layer.borderWidth = 1.0
-        tableView.selectRow(at: IndexPath(row: 0, section: 0), animated: false, scrollPosition: .none)
+        tableView.layer.borderColor = UIColor.white.cgColor
         tableView.isHidden = true
         return tableView
     }()
     
     let transparentView: UIView = {
         let transparentView = UIView()
-        transparentView.backgroundColor = .clear
+        transparentView.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         transparentView.isHidden = true
-        let tapgesture = UITapGestureRecognizer(target: self, action: #selector(hideTableView))
-        transparentView.addGestureRecognizer(tapgesture)
         return transparentView
     }()
     
@@ -71,65 +72,84 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         addTransparentView()
         addTableView()
-        setupTopView()
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        topView.addGestureRecognizer(tapGesture)
+    }
+    
+    @IBAction func didTapped(_ sender: Any) {
+        print("tapped")
+    }
+    
+    @objc private func handleTap() {
+        if isExpanded {
+            hideTableView()
+        } else {
+            showTableView()
+        }
     }
     
     private func addTransparentView() {
-        transparentView.frame = self.view.frame
-        view.addSubview(transparentView)
+        transparentView.frame = self.contentView.bounds
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(hideTableView))
+        transparentView.addGestureRecognizer(tapGesture)
+        contentView.addSubview(transparentView)
+        contentView.bringSubviewToFront(transparentView)
     }
     
     private func addTableView() {
         tableView.delegate = self
         tableView.dataSource = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
-        tableView.frame = CGRect(x: frames.origin.x, y: frames.origin.y + frames.height, width: frames.width, height: tableViewHeight)
-        view.addSubview(tableView)
+        tableView.register(UINib(nibName: "AnotherTableViewCell", bundle: nil), forCellReuseIdentifier: "Cell")
+        tableView.frame = CGRect(x: frames.origin.x, y: frames.origin.y + frames.height, width: frames.width, height: 0) // Initially set height to 0
+        contentView.addSubview(tableView)
+    }
+
+    @objc private func showTableView() {
+        transparentView.isHidden = false
+        tableView.isHidden = false
+        UIView.animate(withDuration: 0.3, animations: {
+            self.tableView.frame.size.height = self.tableViewHeight
+            self.updateScrollViewContentSize()
+        }) { (finished) in
+            self.isExpanded = true
+        }
+    }
+
+    @objc private func hideTableView() {
+        UIView.animate(withDuration: 0.3, animations: {
+            self.tableView.frame.size.height = 0
+            self.updateScrollViewContentSize()
+        }) { (finished) in
+            self.tableView.isHidden = true
+            self.transparentView.isHidden = true
+            self.isExpanded = false
+        }
     }
     
-    private func setupTopView() {
-        let topViewTapGesture = isExpanded ? UITapGestureRecognizer(target: self, action: #selector(hideTableView)) :
-        UITapGestureRecognizer(target: self, action: #selector(showTableView))
-        topView.addGestureRecognizer(topViewTapGesture)
-        topView.backgroundColor = .red
-  }
-
-  @objc private func showTableView() {
-      tableView.isHidden = false
-      transparentView.isHidden = false
-      isExpanded = true
-  }
-
-
-  @objc private func hideTableView() {
-      tableView.isHidden = true
-      transparentView.isHidden = true
-      isExpanded = false
-  }
-    
+    private func updateScrollViewContentSize() {
+        let contentHeight = max(contentView.frame.height, topView.frame.maxY + tableView.frame.height)
+        scrollView.contentSize = CGSize(width: contentView.frame.width, height: contentHeight)
+    }
 }
 
 extension ViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return dataSource.count
-
     }
       
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
-        cell.textLabel?.text = dataSource[indexPath.row]
-        cell.backgroundColor = .red
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath) as? AnotherTableViewCell else {
+            return UITableViewCell()
+        }
+        cell.upperLabel?.text = dataSource[indexPath.row]
+        cell.lowerLabel.text = "vacava"
         return cell
     }
 
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 40
-    }
-          
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         topViewLabel.text = dataSource[indexPath.row]
         hideTableView()
     }
- 
-  
-}*/
+}
+
+*/
