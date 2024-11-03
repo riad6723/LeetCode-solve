@@ -8,76 +8,6 @@
  *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}
  *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}
  * };
-
-// 
-
-// CONTINUOUS BUT NOT PEEKING
-
-import UIKit
-
-enum SwipeDirection {
-    case left
-    case right
-}
-
-class ViewController: UIViewController {
-    @IBOutlet weak var leftView: UIView!
-    @IBOutlet weak var rightView: UIView!
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        let leftCardGesture = UIPanGestureRecognizer(target: self, action: #selector(handleLeftGesture))
-        leftView.addGestureRecognizer(leftCardGesture)
-    }
-    
-    @objc private func handleLeftGesture(_ gesture: UIPanGestureRecognizer) {
-        let translation = gesture.translation(in: leftView)
-        
-        switch gesture.state {
-        case .changed:
-            // Move leftView horizontally as the user swipes
-            if translation.x < 0 { // Only move if swiping left
-                leftView.transform = CGAffineTransform(translationX: translation.x, y: 0)
-                leftView.alpha = 1 + (translation.x / self.view.frame.width) // Gradually fade out
-            }
-            
-        case .ended:
-            if translation.x < -50 { // If swipe exceeds threshold
-                UIView.animate(withDuration: 0.5, delay: 0, options: .curveEaseIn, animations: {
-                    self.leftView.transform = CGAffineTransform(translationX: -self.view.frame.width, y: 0)
-                    self.leftView.alpha = 0 // Fade out
-                    self.view.layoutIfNeeded()
-                }, completion: { _ in
-                    self.leftView.isHidden = true
-                    self.leftView.transform = .identity // Reset transform
-                    NSLayoutConstraint.activate([
-                        self.rightView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 0),
-                    ])
-                })
-                
-            } else {
-                // If swipe doesn't exceed threshold, reset the position
-                UIView.animate(withDuration: 0.3, animations: {
-                    self.leftView.transform = .identity
-                    self.leftView.alpha = 1
-                })
-            }
-            
-        default:
-            break
-        }
-    }
-
-
-    private func resetCardPosition(cardView: UIView) {
-            UIView.animate(withDuration: 0.3) {
-                cardView.transform = .identity
-            }
-        }
-}
-
-
- 
  */
 class Solution {
 public:
@@ -99,78 +29,80 @@ public:
 
 
 /*
-// CONTINUIOUS AND PEEKING BUT GOES BACK TO ORIGINAL POSITION THEN COME BACK
-
-
 import UIKit
 
-enum SwipeDirection {
-    case left
-    case right
-}
-
-class ViewController: UIViewController {
-    @IBOutlet weak var leftView: UIView!
-    @IBOutlet weak var rightView: UIView!
+class ViewController: UIViewController, UIPageViewControllerDataSource, UIPageViewControllerDelegate {
+    func pageViewController(_ pageViewController: UIPageViewController, viewControllerBefore viewController: UIViewController) -> UIViewController? {
+        if let vc = viewController as? leftCardViewController {
+            print("out of scope left")
+            currenctIndex = 0
+            return nil
+        }
+        currenctIndex = 1
+        return leftVC
+    }
+    
+    func pageViewController(_ pageViewController: UIPageViewController, viewControllerAfter viewController: UIViewController) -> UIViewController? {
+        print("right swap")
+        if let vc = viewController as? rightCardViewController {
+            print("out of scope right")
+            currenctIndex = 1
+            return nil
+        }
+        currenctIndex = 0
+        return rightVC
+    }
+    
+    var currenctIndex = 0
+    let pageController = UIPageViewController(transitionStyle: .scroll, navigationOrientation: .horizontal, options: nil)
+    let leftVC = leftCardViewController.makeViewController()
+    let rightVC = rightCardViewController.makeViewController()
+    @IBOutlet weak var cardHolder: UIView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        let leftCardGesture = UIPanGestureRecognizer(target: self, action: #selector(handleLeftGesture))
-        leftView.addGestureRecognizer(leftCardGesture)
+        setupPageController()
+        cardHolder.backgroundColor = .black
+        setupScrollViewObserver()
     }
     
-    @objc private func handleLeftGesture(_ gesture: UIPanGestureRecognizer) {
-        let translation = gesture.translation(in: leftView)
-        
-        switch gesture.state {
-        case .changed:
-            // Move leftView left as the user swipes, making it follow the gesture
-            if translation.x < 0 { // Only move if swiping left
-                leftView.transform = CGAffineTransform(translationX: translation.x, y: 0)
-                leftView.alpha = 1 + (translation.x / self.view.frame.width) // Gradually fade out
-
-                // Make rightView "peek" in from the right side
-                rightView.transform = CGAffineTransform(translationX: translation.x / 2, y: 0) // Adjust factor as needed
-            }
-            
-        case .ended:
-            if translation.x < -50 { // If swipe exceeds threshold
-                UIView.animate(withDuration: 0.5, delay: 0, options: .curveEaseIn, animations: {
-                    self.leftView.transform = CGAffineTransform(translationX: -self.view.frame.width, y: 0)
-                    self.leftView.alpha = 0 // Fade out
-                    self.rightView.transform = .identity // Snap rightView into place
-                    self.view.layoutIfNeeded()
-                }, completion: { _ in
-                    self.leftView.isHidden = true
-                    self.leftView.transform = .identity // Reset transform
-                    NSLayoutConstraint.activate([
-                        self.rightView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 0),
-                    ])
-                })
-                
-            } else {
-                // If swipe doesn't exceed threshold, reset the position of both views
-                UIView.animate(withDuration: 0.3, animations: {
-                    self.leftView.transform = .identity
-                    self.leftView.alpha = 1
-                    self.rightView.transform = .identity
-                })
-            }
-            
-        default:
-            break
-        }
+    private func setupPageController() {
+        self.pageController.dataSource = self
+        self.pageController.delegate = self
+        self.pageController.view.backgroundColor = .clear
+        self.pageController.view.frame = CGRect(x: 0,y: 0,width: self.cardHolder.frame.width,height: self.cardHolder.frame.height)
+        addChild(self.pageController)
+        cardHolder.addSubview(self.pageController.view)
+        self.pageController.didMove(toParent: self)
+        pageController.setViewControllers([leftVC], direction: .forward, animated: true, completion: nil)
     }
-
-
-    private func resetCardPosition(cardView: UIView) {
-            UIView.animate(withDuration: 0.3) {
-                cardView.transform = .identity
-            }
-        }
 }
 
-
+extension ViewController: UIScrollViewDelegate {
+    private func setupScrollViewObserver() {
+        for view in pageController.view.subviews {
+            if let scrollView = view as? UIScrollView {
+                scrollView.delegate = self
+                //scrollView.isScrollEnabled = false
+            }
+        }
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // Calculate current drag distance
+        let dragDistance = scrollView.contentOffset.x - cardHolder.frame.width
+        print(dragDistance)
+        
+        // Disable scroll if drag distance exceeds the limit
+        if currenctIndex == 0, dragDistance<0 {
+            scrollView.isScrollEnabled = false
+        } else if currenctIndex == 1, dragDistance>0 {
+            scrollView.isScrollEnabled = false
+        } else {
+            scrollView.isScrollEnabled = true
+        }
+    }
+}
 
 
 */
